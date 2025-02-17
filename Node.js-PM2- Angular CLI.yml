@@ -1,0 +1,94 @@
+---
+- name: Install Node.js, PM2, and Angular CLI on a Linux Server
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update apt cache (Debian/Ubuntu)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+      register: apt_update_result
+
+    - name: Update dnf cache (RHEL/CentOS)
+      dnf:
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+      register: dnf_update_result
+
+    - name: Install required packages (Debian/Ubuntu)
+      apt:
+        name:
+          - curl
+          - gnupg
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages (RHEL/CentOS)
+      dnf:
+        name:
+          - curl
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Add NodeSource repository (Debian/Ubuntu)
+      shell: |
+        curl -sL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+      when: ansible_os_family == "Debian"
+      register: nodesource_setup
+      retries: 3
+      delay: 5
+
+    - name: Add NodeSource repository (RHEL/CentOS)
+      shell: |
+        curl -sL https://rpm.nodesource.com/setup_lts.x | sudo -E bash -
+      when: ansible_os_family == "RedHat"
+      register: nodesource_setup
+      retries: 3
+      delay: 5
+
+    - name: Install Node.js (Debian/Ubuntu)
+      apt:
+        name: nodejs
+        state: present
+      when: ansible_os_family == "Debian"
+      register: nodejs_install_result
+
+    - name: Install Node.js (RHEL/CentOS)
+      dnf:
+        name: nodejs
+        state: present
+      when: ansible_os_family == "RedHat"
+      register: nodejs_install_result
+
+    - name: Install PM2 globally
+      npm:
+        name: pm2
+        global: yes
+        state: present
+      become: false # Run as the user, not root, after node is set up
+      register: pm2_install_result
+
+    - name: Install Angular CLI globally
+      npm:
+        name: "@angular/cli"
+        global: yes
+        state: present
+      become: false # Run as the user, not root
+      register: angular_cli_install_result
+
+    - name: Set PM2 to start on boot (User Level)
+      shell: "pm2 startup systemd -u {{ ansible_user }} --hp {{ ansible_user_dir }}"
+      become: true # Must run as root to modify systemd files
+      when: pm2_install_result.changed
+      register: pm2_startup_result
+
+    - name: Save PM2 process list
+      shell: "pm2 save"
+      become: false # Run as the user
+      when: pm2_install_result.changed
+
+    - name: Display PM2 startup message
+      debug:
+        msg: "PM2 is set to start on boot. Run 'pm2 list' as user {{ ansible_user }} to verify."
+      when: pm2_startup_result.rc == 0

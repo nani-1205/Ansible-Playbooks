@@ -1,0 +1,47 @@
+---
+- name: Install MongoDB 8.0 on Red Hat (CentOS 9 or RHEL 9)
+  hosts: all  # Or a specific group of servers
+  become: true
+
+  vars:
+    mongodb_version: 8.0
+    mongodb_repo_file: /etc/yum.repos.d/mongodb-org-8.0.repo
+
+  tasks:
+    - name: Configure the MongoDB 8.0 repository
+      blockinfile:
+        path: "{{ mongodb_repo_file }}"
+        block: |
+          [mongodb-org-{{ mongodb_version }}]
+          name=MongoDB Repository
+          baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/{{ mongodb_version }}/x86_64/
+          gpgcheck=1
+          enabled=1
+          gpgkey=https://pgp.mongodb.com/server-{{ mongodb_version }}.asc
+        create: yes
+      register: repo_config_result
+
+    - name: Install MongoDB Community Server (latest release)
+      dnf: # or yum if dnf is not available
+        name: mongodb-org
+        state: present
+      register: install_result
+      retries: 3
+      delay: 10
+
+    - name: Start and enable the MongoDB service
+      service:
+        name: mongod
+        state: started
+        enabled: yes
+      when: install_result.changed
+
+    - name: Check MongoDB version
+      command: mongod --version
+      register: version_result
+      changed_when: false  # This task doesn't change anything
+
+    - name: Display MongoDB version
+      debug:
+        msg: "MongoDB version: {{ version_result.stdout }}"
+      when: version_result.rc == 0 # only show version if the command runs successfully

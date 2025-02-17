@@ -1,0 +1,40 @@
+---
+- name: Configure Nginx Web Server on CentOS 9
+  hosts: webserver
+  become: true
+  gather_facts: yes
+  gather_subset: all
+
+  tasks:
+    - name: Update dnf cache
+      dnf:
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Install Nginx
+      dnf:
+        name: nginx
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Start Nginx service
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Copy custom index.html
+      copy:
+        src: ~/index.html
+        dest: /usr/share/nginx/html/index.html
+        owner: nginx
+        group: nginx
+        mode: '0644'
+      notify: Restart Nginx
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted

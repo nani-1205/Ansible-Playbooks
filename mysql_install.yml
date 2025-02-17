@@ -1,0 +1,125 @@
+---
+- name: Install and Configure MySQL on RHEL/CentOS
+  hosts: all  # Specify your target hosts/groups here
+  become: true  # Run tasks with elevated privileges (sudo)
+
+  vars:
+    mysql_root_password: "YourSecurePassword"  # Replace with a strong password
+    mysql_bind_address: "0.0.0.0"            # Listen on all interfaces (optional, for remote access)
+    mysql_port: 3306                          # Default MySQL port
+
+  tasks:
+    - name: Update yum cache
+      dnf:  # or yum, depending on your system
+        update_cache: yes
+      register: update_result
+      retries: 3
+      delay: 5
+      until: update_result is success
+      tags:
+        - always
+        - update
+
+    - name: Install MySQL server
+      dnf:  # or yum, depending on your system
+        name: mysql-server
+        state: present
+      tags:
+        - install
+
+    - name: Start and enable MySQL service
+      systemd:
+        name: mysqld
+        state: started
+        enabled: yes
+      tags:
+        - start
+
+    - name: Get default temporary root password
+      shell: "grep 'temporary password' /var/log/mysqld.log | awk '{print $NF}'"
+      register: initial_root_password
+      changed_when: false
+      ignore_errors: true
+      tags:
+        - configure
+        - reset_password
+
+    - name: Debug - Print temporary root password
+      debug:
+        var: initial_root_password.stdout
+      tags:
+        - configure
+        - reset_password
+
+    - name: Install PyMySQL Python package (required for MySQL module)
+      dnf:
+        name: python3-PyMySQL  # Or python3-mysqlclient or python2-PyMySQL or python2-MySQL-python depending on the Python version and availability
+        state: present
+      tags:
+        - configure
+        - reset_password
+
+    # - name: Set root user authentication plugin to mysql_native_password
+    #   mysql_query:
+    #     login_user: root
+    #     login_password: "{{ initial_root_password.stdout | default('') }}"
+    #     login_unix_socket: /var/lib/mysql/mysql.sock
+    #     query: "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '{{ mysql_root_password }}';"
+    #   tags:
+    #     - configure
+    #     - reset_password
+
+    - name: Change root password (MySQL 8.0+)
+      mysql_user:
+        name: root
+        host: "{{ item }}"
+        password: "{{ mysql_root_password }}"
+        priv: "*.*:ALL,GRANT"  # Grant all privileges on all databases
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
+      loop:
+        - localhost
+        - 127.0.0.1
+        - "%"  #  for remote access
+      tags:
+        - configure
+        - reset_password
+
+    - name: Configure MySQL bind address (optional)
+      lineinfile:
+        path: /etc/my.cnf.d/mysql-server.cnf  # Or /etc/my.cnf, check your system
+        regexp: '^bind-address'
+        line: "bind-address = {{ mysql_bind_address }}"
+        state: present
+      notify: restart_mysql  # Restart MySQL after changing the bind address
+      tags:
+        - configure
+        - bind
+
+    - name: Configure MySQL port (optional)
+      lineinfile:
+        path: /etc/my.cnf.d/mysql-server.cnf  # Or /etc/my.cnf, check your system
+        regexp: '^port'
+        line: "port = {{ mysql_port }}"
+        state: present
+      notify: restart_mysql
+      tags:
+        - configure
+        - port
+
+    # - name: Run mysql_secure_installation interactive script
+    #   command: mysql_secure_installation
+    #   become: true
+    #   tags:
+    #     - configure
+    #     - security
+
+  handlers:
+    - name: restart_mysql
+      systemd:
+        name: mysqld
+        state: restarted
+      tags:
+        - restart

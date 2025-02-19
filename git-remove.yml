@@ -1,0 +1,8 @@
+---
+- hosts: my_server
+  become: true
+  tasks:
+  - name: git remove
+    ansible.builtin.yum:
+      name: git
+      state: absent

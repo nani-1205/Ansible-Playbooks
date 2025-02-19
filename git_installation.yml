@@ -1,0 +1,9 @@
+---
+- hosts: my_server
+  become: true
+  tasks:
+  - name: install git
+    ansible.builtin.yum:
+      name: git
+      state: present
+      update_cache: yes

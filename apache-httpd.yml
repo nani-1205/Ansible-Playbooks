@@ -1,0 +1,16 @@
+---
+- hosts: my_server
+  become: true
+  tasks:
+  - name: Install apache2
+    ansible.builtin.yum:
+      name: httpd
+      state: present
+      update_cache: yes
+  - name: Copy index.html 
+    ansible.builtin.copy:
+      src: /root/index.html
+      dest: /var/www/html
+      owner: root
+      group: root
+      mode: '0644'

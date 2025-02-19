@@ -1,0 +1,11 @@
+---
+- hosts: my_server
+  become: true
+  tasks:
+  - name: copy index.html
+    ansible.builtin.copy:
+      src: /root/index.html
+      dest: /var/www/html
+      owner: root
+      group: root
+      mode: '0644'

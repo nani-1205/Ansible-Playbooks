@@ -3,7 +3,7 @@
   amazon.aws.ec2_instance:
     name: ansible-instance
     key_name: ABC # Key pair name
-    vpc_subnet_id: subnet-0e70e5246ae5becd8
+    vpc_subnet_id: #your subnet id
     instance_type: t3.micro
     security_group: my-sg
     region: ap-south-2
@@ -11,7 +11,7 @@
     aws_secret_key: "{{ec2_secret_key}}"
     network:
       assign_public_ip: true
-    image_id: ami-00727c10c4e1bec36
+    image_id: ami-00727c10c4e # your ami id
     tags:
       Environment: Testing
 

@@ -1,0 +1,14 @@
+openssl rand -base64 4096 | sha256sum | awk '{print $1}' > vault.pass
+ 
+cat vault.pass
+
+ansible-vault create group_vars/all/pass.yml --vault-password-file vault.pass  #AWS keys
+
+ansible-playbook -i inventory ec2_create.yaml --vault-password-file vault.pass
+
+Now, make password-less Auth b/w control node and newly launched instances
+
+ 
+ansible-playbook -i inventory ec2_shutdown.yaml --vault-password-file vault.pass
+
+

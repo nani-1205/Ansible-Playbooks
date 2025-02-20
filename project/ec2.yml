@@ -1,0 +1,7 @@
+---
+- hosts: localhost
+  connection: local
+  become: true
+  tasks:
+    - import_tasks: ec2_instance/tasks/main.yml
+

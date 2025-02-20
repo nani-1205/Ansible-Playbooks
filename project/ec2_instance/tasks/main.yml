@@ -2,7 +2,7 @@
 - name: start an instance with a public IP address
   amazon.aws.ec2_instance:
     name: ansible-instance
-    key_name: HYD
+    key_name: ABC # Key pair name
     vpc_subnet_id: subnet-0e70e5246ae5becd8
     instance_type: t3.micro
     security_group: my-sg

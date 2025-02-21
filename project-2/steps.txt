@@ -4,6 +4,8 @@ cat vault.pass
 
 ansible-vault create group_vars/all/pass.yml --vault-password-file vault.pass  #AWS keys
 
+ansible-vault edit group_vars/all/pass.yml --vault-password-file vault.pass
+
 ansible-playbook -i inventory ec2_create.yaml --vault-password-file vault.pass
 
 Now, make password-less Auth b/w control node and newly launched instances

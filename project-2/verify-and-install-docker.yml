@@ -1,0 +1,19 @@
+---
+- hosts: my_server
+  become: true
+  tasks:
+    - name: check if docker is installed
+      ansible.builtin.shell: docker --version
+      register: output
+      ignore_errors: yes
+
+    - name: Register the output  
+      ansible.builtin.debug:
+       var: output
+
+
+    - name: Install docker
+      ansible.builtin.yum:
+        name: docker
+        state: present
+      when: output.failed

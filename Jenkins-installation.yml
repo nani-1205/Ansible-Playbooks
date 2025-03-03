@@ -1,0 +1,60 @@
+---
+- name: Install Jenkins on Red Hat/CentOS/Fedora
+  hosts: my_server
+  become: true
+
+  tasks:
+    - name: Add Jenkins repository
+      get_url:
+        url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+        dest: /etc/yum.repos.d/jenkins.repo
+        owner: root
+        group: root
+        mode: '0644'
+      register: jenkins_repo
+
+    - name: Import Jenkins GPG key
+      rpm_key:
+        state: present
+        key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+      register: jenkins_key
+
+    - name: Update yum cache
+      yum:
+        name: '*'
+        state: latest
+      when: jenkins_repo.changed or jenkins_key.changed
+
+    - name: Install required dependencies
+      yum:
+        name:
+          - fontconfig
+          - java-17-openjdk
+        state: present
+
+    - name: Install Jenkins package
+      yum:
+        name: jenkins
+        state: present
+
+    - name: Reload systemd daemon
+      systemd:
+        name: jenkins
+        daemon_reload: yes
+
+    - name: Enable and Start Jenkins service
+      systemd:
+        name: jenkins
+        enabled: yes
+        state: started
+
+    - name: Get initial admin password (using sudo)
+      ansible.builtin.shell: sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: initial_password
+      changed_when: false
+      ignore_errors: yes  # Handle cases where the file might not be immediately available
+
+    - name: Display initial admin password
+      debug:
+        msg: "Initial Jenkins Admin Password: {{ initial_password.stdout if initial_password.stdout else 'Password not available yet.  Jenkins may still be initializing.' }}"
+      when: initial_password.stdout is defined

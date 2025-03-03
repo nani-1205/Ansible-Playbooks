@@ -1,0 +1,16 @@
+---
+- hosts: localhost
+  become: true
+  gather_facts: yes
+  gather_subset: all
+
+  tasks: 
+    - name: remove file
+      ansible.builtin.shell: rm -rf /opt/test/dist #replace dist to your directory name
+
+    - name: copy file
+      ansible.builtin.copy:
+        src: /var/lib/jenkins/workspace/dist    #replace dist to your directory name
+        dest: /opt/gateways/dist                #replace dist to your directory name
+        remote_src: yes
+      
